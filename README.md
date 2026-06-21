@@ -19,6 +19,8 @@ Revenue $1,038.8M ✓ | GMV $11.6B ✓ | Operating income $88.4M ✓ | 30+ DPD 2
 
 This choice matters because Affirm sells a meaningful share of originated loans off-balance-sheet (gain on sales $127M in FQ3'26); stressing total GMV would misrepresent where Affirm actually carries credit risk.
 
+**Income scope note (Affirm):** The pre-provision income figure uses total company GAAP operating income, which includes gain on loan sales ($127.2M/quarter) and servicing income ($44.6M/quarter) from loans sold off-balance-sheet. The model tests whether Affirm as a whole remains profitable under rising NCO rates — not whether the LHI book is self-funding in isolation. The LHI-standalone breakeven would be lower. This choice is consistent with Affirm's integrated capital-light model, where off-balance-sheet origination revenue is structurally linked to the same credit quality that drives LHI losses.
+
 **Klarna data thinness:** Klarna IPO'd September 2025. Only one estimated NCO data point exists for the Fair Financing book. The Beta distribution for Klarna uses Affirm's historical coefficient of variation as an explicit proxy (2× wider to reflect data uncertainty). All Klarna outputs are illustrative of direction, not precise magnitude.
 
 ## Method

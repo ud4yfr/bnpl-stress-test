@@ -50,6 +50,13 @@ def pre_provision_income_per_100(company: CompanyInputs) -> float:
 
     Result is per $100 of LHI (not total dollars) so the unit economics
     equation is: profit = this_number - (nco_rate/4)*100
+
+    Income scope: GAAP operating income includes off-balance-sheet revenue —
+    gain on loan sales (~$127M/quarter) and servicing income (~$44M/quarter)
+    from loans sold to capital partners. This model tests company-level
+    profitability, not whether the LHI book is self-funding. The LHI-only
+    breakeven (using only interest income attributable to retained loans)
+    would be meaningfully lower. See README for scope decision rationale.
     """
     total_quarterly_mm = (
         company.operating_income_quarterly_mm + company.provision_quarterly_mm

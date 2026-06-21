@@ -28,7 +28,7 @@ matplotlib.use("Agg")  # non-interactive backend (saves to file, no window neede
 
 from src.sourcing import AFFIRM, KLARNA
 from src.rollrate import fit_beta_mle, fit_beta_klarna
-from src.model import monte_carlo, unit_economics, find_breakeven_nco_rate
+from src.model import monte_carlo, pre_provision_income_per_100
 from src.plot import build_comparison_figure, save_figure
 
 N_SIMS = 10_000
@@ -65,8 +65,7 @@ Key concept — Gross LHI (Loans Held for Investment):
 
     for company in [AFFIRM, KLARNA]:
         _section(company.name)
-        pre_prov = (company.operating_income_quarterly_mm + company.provision_quarterly_mm) \
-                   / company.lhi_gross_mm * 100
+        pre_prov = pre_provision_income_per_100(company)
         print(f"  Exposure (gross LHI): ${company.lhi_gross_mm:,.0f}M — {company.exposure_label}")
         print(f"  Quarterly operating income: ${company.operating_income_quarterly_mm:.1f}M")
         print(f"  Quarterly provision: ${company.provision_quarterly_mm:.1f}M")

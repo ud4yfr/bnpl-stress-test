@@ -9,7 +9,7 @@ Every hardcoded number is cited inline. Two data quality labels used:
 Do not change any number without updating the citation.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -89,7 +89,7 @@ AFFIRM = CompanyInputs(
         0.0811,  # FQ3 2025 (Mar 31, 2025)
         0.0789,  # FQ4 2025 (Jun 30, 2025)
         0.0751,  # FQ1 2026 (Sep 30, 2025)
-        0.0805,  # FQ2 2026 (Dec 31, 2025)
+        0.0805,  # FQ2 2026 (Dec 31, 2025) — LHI grew +21% QoQ, likely ABS consolidation; NCO proxy may overstate credit losses
         0.0754,  # FQ3 2026 (Mar 31, 2026)
     ],
 
@@ -131,9 +131,11 @@ KLARNA = CompanyInputs(
     lhi_gross_mm=15_200.0,
 
     # SOURCE: Klarna Q4 2025 earnings release — adjusted operating profit = $47M.
-    # This is total company profit; Fair Financing is not broken out separately.
-    # The stress test uses total company profit as the income buffer against
-    # Fair Financing credit losses (conservative — excludes Pay Later margin).
+    # This is total company profit; it INCLUDES Pay Later merchant fees alongside
+    # Fair Financing income — Fair Financing standalone income is not separately disclosed.
+    # The model uses total company profit as the income buffer against Fair Financing
+    # credit losses. This is conservative: it means Fair Financing losses consume the
+    # entire company P&L buffer, with no credit to Pay Later margin offsetting them.
     operating_income_quarterly_mm=47.0,
 
     # ESTIMATED: Total company provision = $250M (SOURCE: Klarna Q4 2025 earnings).
@@ -165,6 +167,7 @@ KLARNA = CompanyInputs(
         "NCO rate is a single estimated point from provision attribution. "
         "Beta distribution uses Affirm's coefficient of variation as proxy. "
         "All Fair Financing attributions (provision split, DPD) are estimated from "
-        "blended company disclosures. Treat all Klarna outputs as illustrative."
+        "blended company disclosures. Treat all Klarna outputs as illustrative. "
+        "NCO estimate is provision-derived, not actual charge-off data; provision overstates NCO during book growth (CECL reserve builds). Actual charge-off rate likely lower — Klarna's true buffer may be slightly wider than modeled. "
     ),
 )

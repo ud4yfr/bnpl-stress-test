@@ -9,10 +9,10 @@ Each panel also shows the Beta distribution of NCO rates in a secondary subplot.
 """
 
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 import numpy as np
 
-from src.model import MonteCarloResult
+from src.model import MonteCarloResult, unit_economics
+from src.sourcing import AFFIRM, KLARNA
 
 
 _AFFIRM_COLOR = "#1a6faf"   # blue
@@ -60,9 +60,12 @@ def _plot_profit_distribution(
     ax.axvline(0, color=_BREAKEVEN_COLOR, linewidth=1.5, linestyle="--", label="Breakeven (profit=0)")
 
     # Current (baseline NCO rate) profit
-    from src.model import unit_economics
-    from src.sourcing import AFFIRM, KLARNA
-    company = AFFIRM if result.company_name == "Affirm" else KLARNA
+    _COMPANY_MAP = {"Affirm": AFFIRM, "Klarna": KLARNA}
+    if result.company_name not in _COMPANY_MAP:
+        raise ValueError(
+            f"Unknown company '{result.company_name}'; expected one of {list(_COMPANY_MAP)}"
+        )
+    company = _COMPANY_MAP[result.company_name]
     current_profit = unit_economics(company, result.current_nco)
     ax.axvline(current_profit, color=_CURRENT_COLOR, linewidth=1.5, linestyle="-",
                label=f"Current NCO ({result.current_nco*100:.2f}%)")
@@ -77,7 +80,6 @@ def _plot_profit_distribution(
     ax.set_xlabel("Quarterly profit per $100 LHI ($)")
     ax.set_ylabel("Frequency (out of 10,000 simulations)")
 
-    proxy_note = "" if result.is_empirical else "\n⚠ PROXY distribution"
     ax.legend(fontsize=8)
 
     if not result.is_empirical:
