@@ -1,123 +1,78 @@
-"""Tests for unit economics, breakeven, and Monte Carlo."""
+import csv
+from pathlib import Path
 
-import numpy as np
 import pytest
 
-from src.sourcing import AFFIRM, KLARNA, CompanyInputs
-from src.rollrate import fit_beta_mle, fit_beta_klarna
-from src.model import (
-    pre_provision_income_per_100,
-    unit_economics,
-    find_breakeven_nco_rate,
-    monte_carlo,
-    MonteCarloResult,
-)
+from src.inputs import load_inputs
+from src.model import annualized_capacity, operating_result, pre_credit_loss_operating_income
+from src.run import run
+from src.schema import CompanyInputs, Scenario
+from src.validation import ValidationError, compatible, read_manifest
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
-# --- Unit economics ---
-
-def test_pre_provision_income_positive_affirm():
-    income = pre_provision_income_per_100(AFFIRM)
-    assert income > 0
+def company() -> CompanyInputs:
+    return CompanyInputs("X", 20, 10, 1000, "USD", "GAAP", "consolidated company")
 
 
-def test_pre_provision_income_positive_klarna():
-    income = pre_provision_income_per_100(KLARNA)
-    assert income > 0
+def test_breakeven_algebra_and_annualization():
+    rate = annualized_capacity(company(), Scenario("base", 0, 0, 0))
+    assert rate == pytest.approx(0.12)
+    assert operating_result(company(), Scenario("base", 0, 0, 0), rate) == pytest.approx(0)
 
 
-def test_unit_economics_zero_nco_equals_pre_provision():
-    """At NCO=0, all income is profit (no credit losses)."""
-    income = pre_provision_income_per_100(AFFIRM)
-    profit = unit_economics(AFFIRM, nco_rate_annual=0.0)
-    assert abs(profit - income) < 1e-9
+def test_profit_declines_with_loss_and_stresses_do_not_help():
+    base = Scenario("base", 0, 0, 0)
+    stressed = Scenario("stress", 0.1, 0.01, 0.05)
+    assert operating_result(company(), base, 0.05) > operating_result(company(), base, 0.10)
+    assert annualized_capacity(company(), stressed) < annualized_capacity(company(), base)
 
 
-def test_unit_economics_at_breakeven_nco_is_zero():
-    """Profit should be ~0 at the breakeven NCO rate."""
-    breakeven = find_breakeven_nco_rate(AFFIRM)
-    profit = unit_economics(AFFIRM, nco_rate_annual=breakeven)
-    assert abs(profit) < 1e-9
+def test_average_exposure_and_manifest_compatibility():
+    inputs, _ = load_inputs(ROOT / "data" / "source_manifest.csv")
+    assert inputs["Klarna"].average_exposure == pytest.approx((10951 + 9614) / 2)
+    with pytest.raises(ValidationError, match="currency"):
+        compatible({"currency": "USD", "economic_scope": "x", "accounting_basis": "GAAP"}, {"currency": "EUR", "economic_scope": "x", "accounting_basis": "GAAP"})
+    with pytest.raises(ValidationError, match="scope"):
+        compatible({"currency": "USD", "economic_scope": "x", "accounting_basis": "GAAP"}, {"currency": "USD", "economic_scope": "y", "accounting_basis": "GAAP"})
 
 
-def test_unit_economics_above_breakeven_negative():
-    """Profit should go negative for NCO rates above breakeven."""
-    breakeven = find_breakeven_nco_rate(AFFIRM)
-    profit = unit_economics(AFFIRM, nco_rate_annual=breakeven + 0.01)
-    assert profit < 0
+def test_manifest_has_documented_derived_and_unavailable_values():
+    rows = read_manifest(ROOT / "data" / "source_manifest.csv")
+    assert any(r["metric_id"] == "net_chargeoffs" and r["transformation"] for r in rows)
+    assert any(r["value_status"] == "unavailable" for r in rows)
+    assert not any(r["metric_id"] == "net_chargeoffs" and r["company"] == "Klarna" for r in rows)
 
 
-def test_unit_economics_below_breakeven_positive():
-    breakeven = find_breakeven_nco_rate(AFFIRM)
-    profit = unit_economics(AFFIRM, nco_rate_annual=breakeven - 0.01)
-    assert profit > 0
+def test_adjusted_income_is_not_used_in_main_inputs():
+    inputs, _ = load_inputs(ROOT / "data" / "source_manifest.csv")
+    assert inputs["Klarna"].operating_income == 17
+    assert pre_credit_loss_operating_income(inputs["Klarna"]) == 203
 
 
-# --- Breakeven ---
-
-def test_affirm_breakeven_above_current():
-    """Affirm's breakeven should be above its current NCO rate (company is profitable)."""
-    breakeven = find_breakeven_nco_rate(AFFIRM)
-    assert breakeven > AFFIRM.baseline_nco_rate_annual
-
-
-def test_klarna_breakeven_above_current():
-    """Klarna's breakeven should also be above current (profitable at baseline)."""
-    breakeven = find_breakeven_nco_rate(KLARNA)
-    assert breakeven > KLARNA.baseline_nco_rate_annual
-
-
-def test_klarna_buffer_smaller_than_affirm():
-    """
-    Klarna should have a smaller buffer to breakeven than Affirm.
-    This is the core thesis: Klarna is more fragile.
-    """
-    affirm_buffer = find_breakeven_nco_rate(AFFIRM) - AFFIRM.baseline_nco_rate_annual
-    klarna_buffer = find_breakeven_nco_rate(KLARNA) - KLARNA.baseline_nco_rate_annual
-    assert klarna_buffer < affirm_buffer
+def test_manifest_rejects_nan_and_undocumented_assumptions(tmp_path):
+    template = (ROOT / "data" / "source_manifest.csv").read_text()
+    bad_nan = tmp_path / "nan.csv"
+    bad_nan.write_text(template.replace("88.429", "nan", 1))
+    with pytest.raises(ValidationError, match="finite"):
+        read_manifest(bad_nan)
+    bad_assumption = tmp_path / "assumed.csv"
+    bad_assumption.write_text(
+        template.replace(",observed,,high,Includes provision for credit losses.", ",assumed,,high,", 1)
+    )
+    with pytest.raises(ValidationError, match="assumed values need notes"):
+        read_manifest(bad_assumption)
 
 
-# --- Monte Carlo ---
-
-def test_monte_carlo_returns_result():
-    a, b = fit_beta_mle(AFFIRM.nco_rate_history)
-    result = monte_carlo(AFFIRM, a, b, n_sims=1000, seed=42)
-    assert isinstance(result, MonteCarloResult)
-
-
-def test_monte_carlo_profits_shape():
-    a, b = fit_beta_mle(AFFIRM.nco_rate_history)
-    result = monte_carlo(AFFIRM, a, b, n_sims=1000, seed=42)
-    assert result.profits.shape == (1000,)
-
-
-def test_monte_carlo_median_profit_positive_at_current():
-    """Affirm at current NCO distribution should have mostly positive outcomes."""
-    a, b = fit_beta_mle(AFFIRM.nco_rate_history)
-    result = monte_carlo(AFFIRM, a, b, n_sims=10_000, seed=42)
-    assert np.median(result.profits) > 0
-
-
-def test_monte_carlo_prob_loss_affirm_very_low():
-    """Affirm is far from breakeven — nearly zero probability of loss in historical range."""
-    a, b = fit_beta_mle(AFFIRM.nco_rate_history)
-    result = monte_carlo(AFFIRM, a, b, n_sims=10_000, seed=42)
-    assert result.prob_loss < 0.05  # less than 5% chance of loss at historical rates
-
-
-def test_monte_carlo_klarna_higher_prob_loss():
-    """Klarna should show higher (though still low) probability of loss."""
-    a_afrm, b_afrm = fit_beta_mle(AFFIRM.nco_rate_history)
-    a_klar, b_klar = fit_beta_klarna(a_afrm, b_afrm, KLARNA.baseline_nco_rate_annual)
-    result = monte_carlo(KLARNA, a_klar, b_klar, n_sims=10_000, seed=42)
-    # Klarna's buffer is thinner, so prob_loss should exceed Affirm's
-    a_afrm2, b_afrm2 = fit_beta_mle(AFFIRM.nco_rate_history)
-    result_afrm = monte_carlo(AFFIRM, a_afrm2, b_afrm2, n_sims=10_000, seed=42)
-    assert result.prob_loss >= result_afrm.prob_loss
-
-
-def test_monte_carlo_reproducible():
-    a, b = fit_beta_mle(AFFIRM.nco_rate_history)
-    r1 = monte_carlo(AFFIRM, a, b, n_sims=100, seed=7)
-    r2 = monte_carlo(AFFIRM, a, b, n_sims=100, seed=7)
-    np.testing.assert_array_equal(r1.profits, r2.profits)
+def test_clean_run_is_reproducible_and_complete(tmp_path):
+    first = run(tmp_path / "one")
+    second = run(tmp_path / "two")
+    assert first == second
+    assert {r["company"] for r in first} == {"Affirm", "Klarna"}
+    assert {r["scenario"] for r in first} == {"base", "downside", "severe"}
+    assert (tmp_path / "one" / "credit_loss_capacity.png").exists()
+    with (tmp_path / "one" / "scenario_results.csv").open() as handle:
+        assert len(list(csv.DictReader(handle))) == 30
+    summary = {row["company"]: float(row["capacity_rate"]) for row in first if row["scenario"] == "base" and row["loss_rate"] == 0.03}
+    assert summary == pytest.approx({"Affirm": 0.1310216092, "Klarna": 0.0789691223})

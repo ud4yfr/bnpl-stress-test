@@ -1,85 +1,68 @@
-# Affirm vs Klarna: How Much Can Delinquency Rise Before the Model Breaks?
+# Affirm vs. Klarna: Credit-Loss Capacity Under Alternative Stress Scenarios
 
-47% of BNPL users said they paid late in the past year. Affirm's 30+ day delinquency rate is flat at 2.8% YoY. Those two numbers don't obviously reconcile, and figuring out why — and whether either company is actually close to a cliff — is what this project is about.
+## Research question
 
-The short answer: Affirm has a ~5.4 percentage point buffer before its model flips to a loss. Klarna has about 1.2. Same delinquency pressure, very different exposure, and the reason comes down to product mix.
+How much annualized credit-loss pressure could the current earnings capacity of Affirm and Klarna absorb under clearly defined accounting, exposure, and attribution assumptions?
 
----
+## Executive summary
 
-## What's actually being measured
+Using the latest comparable public quarter available on the August 1, 2026 review date (both ended March 31, 2026), the base company-level accounting scenario produces static annualized credit-loss capacities of **13.1% for Affirm** and **7.9% for Klarna**. Under the combined downside and severe assumptions, the ranges are **10.9%–13.1%** for Affirm and **5.7%–7.9%** for Klarna.
 
-Both companies originate BNPL loans, but they make money very differently. Affirm's book is 71% interest-bearing installment loans — meaning when a borrower pays late, Affirm has finance-charge revenue sitting on top of the loan that absorbs some of the hit. Klarna runs mostly Pay Later products with no interest income cushion. If a Klarna loan goes bad, the only thing covering it is the merchant fee that was collected at origination.
+This is not a realized-NCO comparison or a forecast. It is a scenario-based accounting capacity calculation: reported operating income plus recognized provision, divided by aligned average company-level consumer credit exposure. Klarna's disclosed Fair Financing write-offs are retained as source evidence, but the filing does not provide comparable Fair Financing recoveries or a product-level income statement; the project therefore does not manufacture a Fair-Financing NCO or profit result.
 
-This model stresses both companies' retained, on-balance-sheet exposure (not total GMV — Affirm sells a meaningful chunk of loans to capital partners and doesn't hold that credit risk) and finds the net charge-off rate at which each one goes from profitable to not.
+## Scope and sources
 
----
+| Company | Comparable period | Numerator | Average exposure | Basis |
+|---|---|---:|---:|---|
+| Affirm | Fiscal Q3 2026, ended March 31 | $284.972m pre-credit-loss operating income | $8.700bn LHI | GAAP |
+| Klarna | Q1 2026, ended March 31 | $203m pre-credit-loss operating profit | $10.283bn gross consumer receivables | IFRS |
 
-## Pre-flight findings
+Primary sources are the [Affirm Q3 FY2026 10-Q](https://www.sec.gov/Archives/edgar/data/1820953/000162828026032294/afrm-20260331.htm) and [Klarna Q1 2026 6-K earnings release](https://www.sec.gov/Archives/edgar/data/2003292/000162828026034877/exhibitno992q126earnings.htm), with Klarna exposure detail in its [Q1 interim report](https://www.sec.gov/Archives/edgar/data/2003292/000162828026034877/exhibitno994klarnagroupplc.htm). Every model input is in [data/source_manifest.csv](data/source_manifest.csv), classified as observed, derived, assumed, or unavailable.
 
-Before touching the model, I pulled the actual filings to confirm every input number.
+## Methodology
 
-**Affirm (FQ3 FY2026, quarter ended March 31, 2026):** Revenue $1,038.8M, GMV $11.6B, operating income $88.4M, 30+ DPD 2.8%, allowance $512.3M at 6.0% of loans held for investment — all confirmed against the 10-Q.
+`pre_credit_loss_operating_income = operating_income + provision`
 
-**Klarna correction:** The product mix I originally had was wrong. "Pay Later" (the 79% of GMV figure) is an umbrella covering three short-term products. Pay-in-4 alone is ~26% of GMV. More importantly, only ~12% of Klarna's GMV is Fair Financing — the interest-bearing, balance-sheet-retained piece that actually carries credit risk. The other 88% gets merchant fees and the receivables are sold after origination.
+`static_annualized_capacity = 4 × pre_credit_loss_operating_income / average_exposure`
 
-**Scope:** The model stresses Affirm's $8.6B loans held for investment and Klarna's $15.2B Fair Financing outstanding. Stressing total GMV for either company would conflate origination volume with retained credit risk, which are very different things.
+Provision is an accounting expense for expected and realized losses; it is never labeled net charge-offs. Affirm directly discloses Q3 gross charge-offs ($179.693m) and recoveries ($21.675m), yielding derived net charge-offs of $158.018m. Klarna discloses $108m of Fair Financing write-offs but not the associated recoveries, so no comparable Klarna NCO is claimed. See [methodology](docs/methodology.md), [assumptions](docs/assumptions.md), and [source notes](docs/source_notes.md).
 
-**Klarna data caveat:** Klarna IPO'd September 2025. There's one estimated NCO data point for the Fair Financing book. The Beta distribution for Klarna uses Affirm's historical coefficient of variation as a documented proxy, with 2× wider spread to reflect data uncertainty. Klarna's results show direction, not precise magnitude.
+## Deterministic results
 
----
+The default grid tests 3%, 6%, 9%, 12%, and 15% assumed annualized loss rates. Base keeps the quarter static; downside and severe reduce revenue and increase funding costs and operating expenses. Outputs are generated, not hand-copied: [outputs/summary.csv](outputs/summary.csv) and [outputs/scenario_results.csv](outputs/scenario_results.csv).
 
-## Method
+![Capacity comparison](outputs/credit_loss_capacity.png)
 
-Starting from each company's GAAP operating income and provision for credit losses, I compute *pre-provision income per $100 of on-balance-sheet exposure* — the income available to absorb credit losses before the company tips into a loss. I fit a Beta distribution to historical quarterly net charge-off rates (7 quarters for Affirm, derived from allowance roll-forwards; proxy for Klarna). 10,000 Monte Carlo draws per company simulate the distribution of quarterly outcomes. The breakeven NCO rate is derived analytically as the point where pre-provision income equals credit losses.
+![Profitability versus loss rate](outputs/profitability_vs_loss_rate.png)
 
----
+![Sensitivity](outputs/sensitivity.png)
 
-## Results
+## Interpretation and limitations
 
-| | Affirm | Klarna |
-|---|---|---|
-| On-balance-sheet exposure | $8.6B (LHI) | $15.2B (Fair Financing) |
-| Current annual NCO rate (est.) | 7.93% | 5.26% (estimated) |
-| Breakeven annual NCO rate | ~13.3% | ~6.5% |
-| Buffer before loss | ~5.4 pp | ~1.2 pp |
-| Fragility ratio | — | ~4.3× more fragile |
+The model indicates greater company-level accounting capacity for Affirm under these selected inputs and scenarios. The magnitude is sensitive to the accounting basis, static-quarter annualization, and the fact that company-level earnings can absorb losses from other activities. Product mix may be useful context, but this model does not decompose revenue, funding costs, servicing costs, and credit losses by product and therefore does not establish a causal product-mix mechanism.
 
-![Stress test chart](outputs/bnpl_stress_test.png)
+Monte Carlo was removed. Seven provision-derived observations and a Klarna proxy distribution could not support a historical probability-of-loss claim. No delinquency-transition model is implemented, so this project does not use “roll rate” terminology.
 
----
-
-## So what?
-
-Affirm needs its annual NCO rate to rise from ~7.9% to ~13.3% — a 67% increase — before it's in trouble. Its interest-bearing product mix generates $532M/quarter in finance-charge revenue that acts as a buffer. The 47% "paying late" industry statistic has not, so far, translated into the NCO trajectory that would threaten that buffer.
-
-Klarna's situation is structurally thinner. Its Fair Financing book needs only a ~1.2 percentage-point increase in NCO rate to consume all of Klarna's adjusted operating profit. The rest of its business generates merchant fees without retained credit risk, but those fees don't cross-subsidize Fair Financing losses. The same shock hits a much smaller income base.
-
-Both companies are currently profitable. Neither is on the immediate edge. But Klarna's margin of safety is roughly 4× smaller, and a moderate credit cycle deterioration — not a tail scenario — could flip Fair Financing into a loss. Affirm would need something more sustained.
-
----
-
-## What this model doesn't capture
-
-- **Funding cost shocks:** Klarna funds the Fair Financing book via consumer deposits (~$13B). Rising rates or deposit outflows would increase funding costs independently of NCO rates.
-- **Recession tail:** The Monte Carlo reflects historical NCO variance. A macro shock could push NCOs discontinuously above anything in the historical distribution.
-- **Regulatory changes:** CFPB proposals to apply credit-bureau reporting to BNPL could change borrower behavior in ways not captured by historical roll rates.
-- **Growth dilution:** Rapid new originations dilute the delinquency ratio in the short term. Sustained growth can mask rising credit costs.
-- **Correlation:** A macro shock would hit both companies simultaneously — the comparison assumes independent credit curves.
-
----
-
-## Running it
+## Reproduce
 
 ```bash
-pip install -r requirements.txt
-python src/run.py
+python3 -m pip install -e '.[dev]'
+python3 -m src.run --mode deterministic --output-dir outputs
+python3 -m pytest -q
+ruff check .
 ```
 
-## Data sources
+The command validates the manifest, writes machine-readable tables and figures, prints capacity summaries and unavailable inputs, and fails on incompatible scope, currency, accounting basis, or invalid values.
 
-- Affirm FQ3 FY2026 8-K shareholder letter (filed May 7, 2026)
-- Affirm FQ3 FY2026 10-Q (Accession 0001628280-26-032294)
-- StockAnalysis.com quarterly financials (provision, LHI — cross-checked vs 10-Q)
-- Klarna Q4 2025 earnings release (February 19, 2026)
-- Klarna 20-F FY2025 (SEC EDGAR)
-- Klarna F-1 prospectus (SEC EDGAR, March 2025)
+## Repository structure
+
+```text
+config/     transparent stress assumptions
+data/       source manifest
+docs/       audit, methodology, assumptions, source notes
+src/        typed inputs, validation, deterministic model, reporting, plots
+tests/      model and validation checks
+outputs/    reproducible generated artifacts
+```
+
+This is an analytical exercise, not investment advice.

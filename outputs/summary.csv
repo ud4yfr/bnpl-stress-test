@@ -1,0 +1,3 @@
+company,scenario,loss_rate,pre_credit_loss_operating_income,average_exposure,capacity_rate,operating_result,change_from_provision_proxy,currency,accounting_basis
+Affirm,base,0.03,284.972,8700.0,0.1310216091954023,219.72199999999998,-0.060364597701149436,USD,GAAP
+Klarna,base,0.03,203.0,10282.5,0.07896912229516168,125.88124999999998,-0.04235594456601022,USD,IFRS
