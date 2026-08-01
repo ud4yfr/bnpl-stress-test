@@ -6,7 +6,7 @@ How much annualized credit-loss pressure could the current earnings capacity of 
 
 ## Executive summary
 
-Using the latest comparable public quarter available on the August 1, 2026 review date (both ended March 31, 2026), the base company-level accounting scenario produces static annualized credit-loss capacities of **13.1% for Affirm** and **7.9% for Klarna**. Under the combined downside and severe assumptions, the ranges are **10.9%–13.1%** for Affirm and **5.7%–7.9%** for Klarna.
+Using the latest comparable public quarter available on the August 1, 2026 review date (both ended March 31, 2026), the base company-level accounting scenario produces static annualized credit-loss capacities of **13.1% for Affirm** and **7.9% for Klarna**. Across the base, downside, and severe combined assumptions, the ranges are **7.2%–13.1%** for Affirm and **3.5%–7.9%** for Klarna.
 
 This is not a realized-NCO comparison or a forecast. It is a scenario-based accounting capacity calculation: reported operating income plus recognized provision, divided by aligned average company-level consumer credit exposure. Klarna's disclosed Fair Financing write-offs are retained as source evidence, but the filing does not provide comparable Fair Financing recoveries or a product-level income statement; the project therefore does not manufacture a Fair-Financing NCO or profit result.
 
